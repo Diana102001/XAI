@@ -15,14 +15,18 @@ urlpatterns=[
     # path('create-query',views.createQuery,name="create-query"),
     ############# TEST
     path('create-query', views.query_view, name='create-query'),
-    path('dynamic_form/<int:model_version_id>/', views.dynamic_form_view, name='dynamic_form_view'),
-    path('get_dynamic_form/<int:model_version_id>/', views.get_dynamic_form, name='get_dynamic_form'),
+    # path('dynamic_form/<int:model_version_id>/', views.dynamic_form_view, name='dynamic_form_view'),
+    # path('get_dynamic_form/<int:model_version_id>/', views.get_dynamic_form, name='get_dynamic_form'),
     path('explain_query/<int:query_id>/', views.explain_query, name='explain_query'),
     path('visualise_query/<int:query_id>/', views.visualise_query, name='visualise_query'),
     path('aimodels/', views.AIModelList.as_view()),
     path('aimodels/<int:pk>/', views.AIModelDetail.as_view()),
     path('queries/', views.QueryList.as_view()),
     path('queries/<int:pk>/', views.QueryDetail.as_view()),
+    path('query/', views.QueryView.as_view(), name='query-view'),
+    path('dynamic_form/<int:model_version_id>/', views.DynamicFormView.as_view(), name='dynamic-form-view'),
+    path('get_dynamic_form/<int:model_version_id>/', views.GetDynamicForm.as_view(), name='get-dynamic-form')
+
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

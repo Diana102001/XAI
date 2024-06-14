@@ -7,7 +7,7 @@ import pandas as pd
 import json
 from interpret import show,preserve,show_link
 import os
-from .serializers import AIModelSerializer,QuerySeralizer
+from .serializers import AIModelSerializer,QuerySeralizer,DynamicFormSerializer
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
@@ -18,9 +18,60 @@ from django.http import Http404
 from rest_framework import mixins
 from rest_framework import generics
 
+# views.py
+class QueryView(APIView):
+    def post(self, request):
+        serializer = QuerySeralizer(data=request.data)
+        if serializer.is_valid():
+            model_version_id = serializer.validated_data['modelv'].id
+            return Response({'model_version_id': model_version_id}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DynamicFormView(APIView):
+    def get(self, request, model_version_id):
+        model_version = ModelVersion.objects.get(id=model_version_id)
+        model = model_version.getModel()
+        feature_names = model.feature_names_in_
+        
+        serializer = DynamicFormSerializer(feature_names=feature_names)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, model_version_id):
+        model_version = ModelVersion.objects.get(id=model_version_id)
+        model = model_version.getModel()
+        feature_names = model.feature_names_in_
+
+        serializer = DynamicFormSerializer(data=request.data, feature_names=feature_names)
+        if serializer.is_valid():
+            input_data = serializer.validated_data
+            query = Query(
+                model=model_version.model,
+                modelv=model_version,
+                query_input=json.dumps(input_data)
+            )
+            result = self.use_ai_model(model, input_data)
+            query.query_output = json.dumps(result['result'])
+            query.save()
+            return Response({'result': result, 'query_id': query.pk}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def use_ai_model(self, model, input_data):
+        # Assuming the model has a predict method
+        input_df = pd.DataFrame([input_data])
+        result = model.predict(input_df)
+        return {"result": result[0]}
+
+class GetDynamicForm(APIView):
+    def get(self, request, model_version_id):
+        model_version = ModelVersion.objects.get(id=model_version_id)
+        model = model_version.getModel()
+        feature_names = model.feature_names_in_
+
+        serializer = DynamicFormSerializer(feature_names=feature_names)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
+##################
 class AIModelList(generics.ListCreateAPIView):
     queryset = AIModel.objects.all()
     serializer_class = AIModelSerializer
